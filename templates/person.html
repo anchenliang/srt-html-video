@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>手绘线条小人</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #1a1a1a; /* 外部背景黑，模拟原图两侧 */
+        }
+        .svg-container {
+            background-color: #FAF0DC; /* 内部米黄色画布 */
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            overflow: hidden;
+            width: 100%;
+            max-width: 800px;
+        }
+        svg {
+            display: block;
+            width: 100%;
+            height: auto;
+        }
+    </style>
+</head>
+<body>
+
+<div class="svg-container">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500">
+        <!-- 定义线稿样式：黑色、圆角、无填充 -->
+        <g fill="none" stroke="#222222" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+            
+            <!-- 1. 头部 -->
+            <circle cx="400" cy="180" r="50" />
+            
+            <!-- 2. 头发（三根线条） -->
+            <path d="M 352 155 Q 370 130 410 135 Q 435 135 450 150" />
+            <path d="M 370 130 L 385 140" /> <!-- 额外小发丝 -->
+            <path d="M 435 135 L 440 145" /> <!-- 额外小发丝 -->
+
+            <!-- 3. 眼睛（实心小圆点） -->
+            <circle cx="378" cy="180" r="6" fill="#222222" stroke="none" />
+            <circle cx="422" cy="180" r="6" fill="#222222" stroke="none" />
+
+            <!-- 4. 嘴巴（弧线微笑） -->
+            <path d="M 378 195 Q 400 215 422 195" stroke-width="3" />
+
+            <!-- 5. 身体躯干 -->
+            <path d="M 400 230 L 400 320" stroke-width="6" />
+
+            <!-- 6. 左臂（舒展） -->
+            <path d="M 385 245 L 330 280" />
+            <!-- 左手（半圆弧） -->
+            <path d="M 320 275 Q 335 300 345 285" stroke-width="4" />
+
+            <!-- 7. 右臂（舒展） -->
+            <path d="M 415 245 L 470 280" />
+            <!-- 右手（半圆弧） -->
+            <path d="M 455 285 Q 465 300 480 275" stroke-width="4" />
+
+            <!-- 8. 左腿（站立） -->
+            <path d="M 400 320 L 345 390" />
+            <!-- 左脚（半圆弧鞋子） -->
+            <path d="M 330 395 Q 345 415 360 400" stroke-width="4" />
+
+            <!-- 9. 右腿（站立） -->
+            <path d="M 400 320 L 455 390" />
+            <!-- 右脚（半圆弧鞋子） -->
+            <path d="M 440 400 Q 455 415 470 395" stroke-width="4" />
+
+        </g>
+    </svg>
+</div>
+
+</body>
+</html>
