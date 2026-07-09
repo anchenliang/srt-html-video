@@ -1,10 +1,10 @@
-﻿# Node.js
+﻿@'
+# Node.js
 node_modules/
 npm-cache/
 
-# Generated videos
-projects/*/srt-html-video/renders/
-projects/*/srt-html-video/node_modules/
+# Generated projects
+projects/
 
 # Python cache
 __pycache__/
@@ -20,3 +20,4 @@ _write_template.py
 # System
 .DS_Store
 Thumbs.db
+'@ | Set-Content -Path "C:\Users\13515\Downloads\srt_html_video\codexPro\.gitignore" -Encoding UTF8
