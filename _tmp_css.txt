@@ -1,0 +1,494 @@
+/* 全局重置与基础 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #0b1120;
+            /* 适配视频16:9裁剪，若需精确可设定宽高，此处使用全屏自适应 */;
+        }
+
+        /* 主容器 —— 模拟 16:9 的视频画布 */
+        .podcast-frame {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            max-width: 1920px;
+            max-height: 1080px;
+            aspect-ratio: 16 / 9;
+            background: radial-gradient(circle at 80% 20%, #1a2a4a, #0a0f1e 80%);
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: inset 0 0 150px rgba(0, 0, 0, 0.6);
+        }
+
+        /* ===== 背景装饰元素（丰富画面） ===== */
+        .bg-orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.4;
+            pointer-events: none;
+            animation: floatOrb 8s ease-in-out infinite alternate;
+        }
+        .bg-orb--1 {
+            width: 600px;
+            height: 600px;
+            top: -200px;
+            right: -100px;
+            background: #3b82f6;
+            animation-delay: 0s;
+        }
+        .bg-orb--2 {
+            width: 400px;
+            height: 400px;
+            bottom: -100px;
+            left: -50px;
+            background: #8b5cf6;
+            animation-delay: 2s;
+            opacity: 0.25;
+        }
+        .bg-orb--3 {
+            width: 200px;
+            height: 200px;
+            top: 40%;
+            left: 50%;
+            background: #06b6d4;
+            animation-delay: 4s;
+            opacity: 0.15;
+            filter: blur(100px);
+        }
+
+        /* 浮动的小点 */
+        .dot-grid {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+            background-size: 40px 40px;
+            pointer-events: none;
+        }
+
+        @keyframes floatOrb {
+            0% {
+                transform: translate(0, 0) scale(1);
+            }
+            100% {
+                transform: translate(30px, 40px) scale(1.1);
+            }
+        }
+
+        /* ===== 顶部播客品牌栏 ===== */
+        .top-bar {
+            position: absolute;
+            top: 32px;
+            left: 40px;
+            right: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            z-index: 10;
+        }
+        .podcast-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: rgba(255, 255, 255, 0.8);
+            font-weight: 600;
+            font-size: 15px;
+            letter-spacing: 0.5px;
+            background: rgba(255, 255, 255, 0.06);
+            backdrop-filter: blur(8px);
+            padding: 8px 20px 8px 16px;
+            border-radius: 100px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .podcast-brand .wave-icon {
+            display: flex;
+            align-items: center;
+            gap: 3px;
+            height: 20px;
+        }
+        .podcast-brand .wave-icon span {
+            display: block;
+            width: 3px;
+            height: 100%;
+            background: #60a5fa;
+            border-radius: 2px;
+            animation: waveAnim 1.2s ease-in-out infinite alternate;
+        }
+        .podcast-brand .wave-icon span:nth-child(2) {
+            animation-delay: 0.2s;
+            height: 70%;
+        }
+        .podcast-brand .wave-icon span:nth-child(3) {
+            animation-delay: 0.4s;
+            height: 90%;
+        }
+        .podcast-brand .wave-icon span:nth-child(4) {
+            animation-delay: 0.1s;
+            height: 50%;
+        }
+        .podcast-brand .wave-icon span:nth-child(5) {
+            animation-delay: 0.3s;
+            height: 80%;
+        }
+
+        @keyframes waveAnim {
+            0% {
+                transform: scaleY(0.4);
+            }
+            100% {
+                transform: scaleY(1);
+            }
+        }
+
+        .sentence-counter {
+            color: rgba(255, 255, 255, 0.4);
+            font-size: 14px;
+            font-weight: 500;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 6px 16px;
+            border-radius: 100px;
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        /* ===== 主体内容（人物 + 文本） ===== */
+        .main-content {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 60px;
+            padding: 0 60px;
+            z-index: 5;
+            width: 100%;
+            max-width: 1300px;
+            margin-top: 20px;
+        }
+
+        /* --- 左侧：人物角色 --- */
+        .character-wrapper {
+            flex-shrink: 0;
+            width: 280px;
+            height: 340px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-end;
+            animation: fadeSlideUp 0.8s 0.2s both;
+        }
+
+        .character-svg {
+            width: 220px;
+            height: 280px;
+            filter: drop-shadow(0 20px 40px rgba(0, 0, 0, 0.5));
+        }
+
+        /* 人物下方气泡提示 */
+        .speech-bubble-tag {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(6px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 8px 20px;
+            border-radius: 40px;
+            color: #93bbfc;
+            font-size: 13px;
+            font-weight: 500;
+            letter-spacing: 0.3px;
+            margin-top: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .speech-bubble-tag .dot {
+            width: 8px;
+            height: 8px;
+            background: #4ade80;
+            border-radius: 50%;
+            display: inline-block;
+            animation: pulseDot 1.5s ease-in-out infinite;
+        }
+        @keyframes pulseDot {
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+            50% {
+                opacity: 0.4;
+                transform: scale(0.7);
+            }
+        }
+
+        /* --- 右侧：核心文案 --- */
+        .text-wrapper {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            animation: fadeSlideUp 0.8s 0.4s both;
+        }
+
+        .text-wrapper .line {
+            display: block;
+            color: #ffffff;
+            font-weight: 700;
+            line-height: 1.2;
+            opacity: 0;
+            animation: textReveal 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        /* 三行文字分别设置延迟，模拟语音逐句出现 */
+        .text-wrapper .line:nth-child(1) {
+            animation-delay: 0.6s;
+            font-size: clamp(36px, 4.5vw, 68px);
+            letter-spacing: -0.02em;
+        }
+        .text-wrapper .line:nth-child(2) {
+            animation-delay: 0.9s;
+            font-size: clamp(38px, 4.8vw, 72px);
+            letter-spacing: -0.02em;
+            color: #e2e8f0;
+        }
+        .text-wrapper .line:nth-child(3) {
+            animation-delay: 1.2s;
+            font-size: clamp(40px, 5.2vw, 78px);
+            letter-spacing: -0.02em;
+            background: linear-gradient(135deg, #fbbf24, #f59e0b);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* 对关键词“few minutes”额外加粗和下划线装饰，突出内容关联性 */
+        .text-wrapper .line:nth-child(2) .highlight {
+            position: relative;
+            color: #fcd34d;
+            -webkit-text-fill-color: #fcd34d;
+            background: none;
+            font-weight: 800;
+            border-bottom: 4px solid #f59e0b;
+            padding-bottom: 4px;
+        }
+
+        @keyframes textReveal {
+            0% {
+                opacity: 0;
+                transform: translateY(30px) scale(0.96);
+                filter: blur(6px);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+                filter: blur(0);
+            }
+        }
+
+        @keyframes fadeSlideUp {
+            0% {
+                opacity: 0;
+                transform: translateY(40px);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* ===== 底部：音频波形可视化 + 进度条 ===== */
+        .bottom-wave {
+            position: absolute;
+            bottom: 32px;
+            left: 40px;
+            right: 40px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            z-index: 10;
+        }
+
+        .waveform-bars {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            flex: 1;
+            height: 32px;
+        }
+
+        .waveform-bars .bar {
+            flex: 1;
+            height: 100%;
+            background: linear-gradient(180deg, #3b82f6, #8b5cf6);
+            border-radius: 4px;
+            opacity: 0.5;
+            animation: barAnim 1.4s ease-in-out infinite alternate;
+            transform-origin: bottom;
+            min-width: 4px;
+            max-width: 12px;
+        }
+
+        /* 随机给每个bar不同的高度和延迟，模拟真实音频波形 */
+        .waveform-bars .bar:nth-child(1) {
+            height: 40%;
+            animation-delay: 0.0s;
+        }
+        .waveform-bars .bar:nth-child(2) {
+            height: 70%;
+            animation-delay: 0.2s;
+        }
+        .waveform-bars .bar:nth-child(3) {
+            height: 30%;
+            animation-delay: 0.4s;
+        }
+        .waveform-bars .bar:nth-child(4) {
+            height: 90%;
+            animation-delay: 0.1s;
+        }
+        .waveform-bars .bar:nth-child(5) {
+            height: 55%;
+            animation-delay: 0.6s;
+        }
+        .waveform-bars .bar:nth-child(6) {
+            height: 80%;
+            animation-delay: 0.3s;
+        }
+        .waveform-bars .bar:nth-child(7) {
+            height: 45%;
+            animation-delay: 0.7s;
+        }
+        .waveform-bars .bar:nth-child(8) {
+            height: 100%;
+            animation-delay: 0.5s;
+        }
+        .waveform-bars .bar:nth-child(9) {
+            height: 60%;
+            animation-delay: 0.2s;
+        }
+        .waveform-bars .bar:nth-child(10) {
+            height: 35%;
+            animation-delay: 0.8s;
+        }
+        .waveform-bars .bar:nth-child(11) {
+            height: 75%;
+            animation-delay: 0.4s;
+        }
+        .waveform-bars .bar:nth-child(12) {
+            height: 50%;
+            animation-delay: 0.9s;
+        }
+        .waveform-bars .bar:nth-child(13) {
+            height: 85%;
+            animation-delay: 0.1s;
+        }
+        .waveform-bars .bar:nth-child(14) {
+            height: 65%;
+            animation-delay: 0.6s;
+        }
+        .waveform-bars .bar:nth-child(15) {
+            height: 40%;
+            animation-delay: 0.3s;
+        }
+
+        @keyframes barAnim {
+            0% {
+                transform: scaleY(0.3);
+                opacity: 0.3;
+            }
+            100% {
+                transform: scaleY(1);
+                opacity: 0.9;
+            }
+        }
+
+        /* 当前播放时间指示 */
+        .time-indicator {
+            color: rgba(255, 255, 255, 0.3);
+            font-size: 13px;
+            font-weight: 500;
+            font-variant-numeric: tabular-nums;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 4px 12px;
+            border-radius: 20px;
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            white-space: nowrap;
+        }
+
+        /* ===== 主题图标装饰（围绕文本） ===== */
+        .icon-deco {
+            position: absolute;
+            opacity: 0.08;
+            font-size: 120px;
+            pointer-events: none;
+            z-index: 1;
+        }
+        .icon-deco--survey {
+            bottom: 100px;
+            right: 30px;
+            transform: rotate(10deg);
+            color: #60a5fa;
+        }
+        .icon-deco--clock {
+            top: 150px;
+            right: 80px;
+            font-size: 80px;
+            opacity: 0.06;
+            color: #fcd34d;
+        }
+
+        /* 响应式微调 */
+        @media (max-width: 900px) {
+            .main-content {
+                flex-direction: column;
+                gap: 20px;
+                padding: 0 30px;
+            }
+            .character-wrapper {
+                width: 160px;
+                height: 200px;
+            }
+            .character-svg {
+                width: 140px;
+                height: 180px;
+            }
+            .text-wrapper .line {
+                text-align: center;
+            }
+            .text-wrapper .line:nth-child(1) {
+                font-size: clamp(28px, 5vw, 40px);
+            }
+            .text-wrapper .line:nth-child(2) {
+                font-size: clamp(30px, 5.5vw, 44px);
+            }
+            .text-wrapper .line:nth-child(3) {
+                font-size: clamp(32px, 6vw, 48px);
+            }
+            .top-bar {
+                top: 20px;
+                left: 20px;
+                right: 20px;
+            }
+            .bottom-wave {
+                bottom: 20px;
+                left: 20px;
+                right: 20px;
+            }
+            .icon-deco {
+                display: none;
+            }
+        }

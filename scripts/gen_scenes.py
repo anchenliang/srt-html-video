@@ -1,4 +1,4 @@
-﻿import re, json, os, sys, argparse
+﻿import re, json, os, sys, argparse, random, shutil
 
 STOP_WORDS = {"a","an","the","and","or","but","in","on","at","to","for","of","with","by",
               "that","this","it","is","are","was","were","be","been","being","have","has","had",
@@ -90,6 +90,26 @@ def main():
     os.makedirs(comp_dir, exist_ok=True)
     os.makedirs(os.path.join(args.output, "renders"), exist_ok=True)
 
+    # Setup: copy random images from allPicture/ into assets/
+    allpic_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "allPicture")
+    assets_dir = os.path.join(args.output, "assets")
+    has_images = False
+    image_map = {}
+    if os.path.isdir(allpic_dir):
+        all_images = sorted([f for f in os.listdir(allpic_dir) if f.lower().endswith(('.png','.jpg','.jpeg','.webp','.gif'))])
+        if all_images:
+            has_images = True
+            os.makedirs(assets_dir, exist_ok=True)
+            # Pick N random images (one per scene, with replacement if more scenes than images)
+            picked = random.choices(all_images, k=total) if total > len(all_images) else random.sample(all_images, total)
+            for pi, fname in enumerate(picked):
+                src_path = os.path.join(allpic_dir, fname)
+                ext = os.path.splitext(fname)[1]
+                dst_name = f"scene-{(pi+1):03d}{ext}"
+                dst_path = os.path.join(assets_dir, dst_name)
+                shutil.copy2(src_path, dst_path)
+                image_map[pi] = dst_name
+
     for i, entry in enumerate(entries):
         idx = entry["idx"]
         text = entry["text"]
@@ -99,6 +119,11 @@ def main():
         emojis = EMOJI_SETS[i % len(EMOJI_SETS)]
         progress = int((i + 1) * 100 / total)
         sid = f"scene-{idx:03d}"
+        # Calculate scene duration and exit time
+        scene_start = entry["start"]
+        scene_end = entry["end"]
+        scene_duration = max(0.5, round(scene_end - scene_start, 3))
+        exit_time = round(max(0.5, scene_duration - 0.5), 2)
 
         # Highlight
         pattern = re.compile(re.escape(keyword), re.IGNORECASE)
@@ -116,12 +141,22 @@ def main():
         content = content.replace("PROGRESS_PCT", str(progress) + "%")
         content = content.replace("POSENAME", pose)
         content = content.replace("SUBTITLE_TEXT", highlighted)
-        # Replace old template sentence FIRST (before hl-STYLE is changed)
+        # Replace old template sentence FIRST
         old_sentence = 'example sentence with a <span class="hl-STYLE">WORD</span>.'
         content = content.replace(old_sentence, highlighted)
 
-        # Then replace hl-STYLE in CSS
+        # Replace hl-STYLE in CSS
         content = content.replace("hl-STYLE", hl_class)
+
+        # Replace EXIT_TIME with calculated value
+        content = content.replace('"EXIT_TIME"', str(exit_time))
+
+        # Replace random image path
+        if has_images and i in image_map:
+            img_rel = "assets/" + image_map[i]
+            content = content.replace("RANDOM_IMG", img_rel)
+        else:
+            content = content.replace("RANDOM_IMG", "")
 
         # Replace emojis - support both template styles
         emoji_positions = find_emojis(content)
@@ -151,17 +186,36 @@ def main():
         f'<title>{args.title}</title>',
         '<style>*{margin:0;padding:0;box-sizing:border-box}body{background:#F9F6F0}</style>',
         '</head>', '<body>',
-        '<div data-composition-id="main-comp" data-width="1920" data-height="1080">'
+        '<div data-composition-id="main-comp" data-start="0" data-width="1920" data-height="1080">'
     ]
+
+    # Setup: copy random images from allPicture/ into assets/
+    allpic_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "allPicture")
+    assets_dir = os.path.join(args.output, "assets")
+    has_images = False
+    image_map = {}
+    if os.path.isdir(allpic_dir):
+        all_images = sorted([f for f in os.listdir(allpic_dir) if f.lower().endswith(('.png','.jpg','.jpeg','.webp','.gif'))])
+        if all_images:
+            has_images = True
+            os.makedirs(assets_dir, exist_ok=True)
+            # Pick N random images (one per scene, with replacement if more scenes than images)
+            picked = random.choices(all_images, k=total) if total > len(all_images) else random.sample(all_images, total)
+            for pi, fname in enumerate(picked):
+                src_path = os.path.join(allpic_dir, fname)
+                ext = os.path.splitext(fname)[1]
+                dst_name = f"scene-{(pi+1):03d}{ext}"
+                dst_path = os.path.join(assets_dir, dst_name)
+                shutil.copy2(src_path, dst_path)
+                image_map[pi] = dst_name
 
     for i, entry in enumerate(entries):
         idx = entry["idx"]
         start = entry["start"]
         end = entry["end"]
-        next_start = entries[i+1]["start"] if i+1 < len(entries) else end
-        duration = round(next_start - start, 3)
-        if duration < 0.5:
-            duration = round(end - start, 3)
+        duration = round(end - start, 3)
+        if duration < 0.4:
+            duration = 0.5
         sid = f"scene-{idx:03d}"
         index_lines.append(
             f'<div id="el-{idx}" data-composition-id="{sid}" '

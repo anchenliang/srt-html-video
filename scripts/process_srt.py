@@ -16,7 +16,7 @@ import argparse, json, os, sys, subprocess, re, shutil
 SCRIPTS_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECTS_DIR = os.path.join(os.path.dirname(SCRIPTS_DIR), "projects")
 TEMPLATES_DIR = os.path.join(os.path.dirname(SCRIPTS_DIR), "templates")
-DEFAULT_TEMPLATE = os.path.join(TEMPLATES_DIR, "podcast-ref-template.html")
+DEFAULT_TEMPLATE = os.path.join(TEMPLATES_DIR, "podcast-enhanced-template.html")
 
 PACKAGE_JSON = json.dumps({
     "name": "srt-html-video",
@@ -126,7 +126,7 @@ def main():
     render_cmd = [
         "npx", "hyperframes", "render",
         "--output", output_name,
-        "--gpu", "--workers", "2",
+        "--gpu", "--workers", "1",
         "--quality", args.quality
     ]
     code = run_cmd(render_cmd, cwd=hf_dir)

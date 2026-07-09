@@ -1,0 +1,110 @@
+﻿<template id="scene-001-template">
+  <div data-composition-id="scene-001" data-width="1920" data-height="1080">
+    <style>
+      [data-composition-id="scene-001"] {
+        width: 100%; height: 100%;
+        position: relative; overflow: hidden;
+        background: #F9F6F0;
+        font-family: 'Poppins', sans-serif;
+      }
+      .blob { position: absolute; border-radius: 50%; filter: blur(80px); opacity: 0.35; pointer-events: none; }
+      .blob-1 { width: 500px; height: 500px; background: #FFD3B4; top: -150px; left: -120px; }
+      .blob-2 { width: 400px; height: 400px; background: #B5EAD7; bottom: -120px; right: -100px; }
+      .blob-3 { width: 600px; height: 600px; background: #C7CEEA; top: 50%; left: 50%; transform: translate(-50%,-50%); opacity: 0.15; }
+      .dot-grid { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-image: radial-gradient(rgba(0,0,0,0.04) 1px, transparent 1px); background-size: 40px 40px; pointer-events: none; z-index: 0; }
+      .deco-icon { position: absolute; z-index: 1; opacity: 0.5; user-select: none; pointer-events: none; }
+      .icon-1 { top: 5%; left: 3%; font-size: 42px; }
+      .icon-2 { top: 4%; right: 4%; font-size: 36px; }
+      .icon-3 { bottom: 22%; left: 3%; font-size: 46px; }
+      .icon-4 { bottom: 15%; right: 3%; font-size: 38px; }
+      .icon-5 { top: 38%; left: 1%; font-size: 28px; opacity: 0.35; }
+      .icon-6 { top: 42%; right: 1%; font-size: 32px; opacity: 0.35; }
+      .watermark { position: absolute; top: 10%; left: -5%; font-size: 180px; font-weight: 900; color: #EAE2D8; z-index: 0; letter-spacing: -6px; user-select: none; opacity: 0.35; transform: rotate(-5deg); white-space: nowrap; pointer-events: none; }
+      .watermark-bottom { bottom: -5%; right: -5%; top: auto; left: auto; transform: rotate(5deg); }
+      .top-bar { position: absolute; top: 28px; left: 36px; right: 36px; display: flex; align-items: center; justify-content: space-between; z-index: 10; }
+      .podcast-brand { display: flex; align-items: center; gap: 10px; color: #B8A89A; font-weight: 600; font-size: 13px; letter-spacing: 0.5px; background: rgba(255,255,255,0.5); backdrop-filter: blur(8px); padding: 6px 16px 6px 12px; border-radius: 100px; border: 1px solid rgba(0,0,0,0.04); }
+      .wave-icon { display: flex; align-items: center; gap: 2px; height: 16px; }
+      .wave-icon span { display: block; width: 3px; height: 100%; background: #F97316; border-radius: 2px; animation: waveAnim 1.2s ease-in-out infinite alternate; }
+      .wave-icon span:nth-child(2) { animation-delay: 0.2s; height: 70%; }
+      .wave-icon span:nth-child(3) { animation-delay: 0.4s; height: 90%; }
+      .wave-icon span:nth-child(4) { animation-delay: 0.1s; height: 50%; }
+      .wave-icon span:nth-child(5) { animation-delay: 0.3s; height: 80%; }
+      @keyframes waveAnim { 0% { height: 30%; } 100% { height: 100%; } }
+      .sentence-counter { color: #C1B6A8; font-size: 12px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; background: rgba(255,255,255,0.4); backdrop-filter: blur(8px); padding: 6px 16px; border-radius: 100px; border: 1px solid rgba(0,0,0,0.03); }
+      .main-content { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); display: flex; align-items: center; justify-content: center; gap: 50px; z-index: 5; width: 100%; max-width: 1600px; padding: 0 60px; }
+      .character-wrapper { flex-shrink: 0; width: 180px; height: 180px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: rgba(255,255,255,0.5); box-shadow: 0 8px 32px rgba(0,0,0,0.06); overflow: hidden; }
+      .character-img { width: 88%; height: 88%; object-fit: contain; border-radius: 50%; }
+      .text-area { flex: 1; min-width: 0; }
+      .main-sentence { font-size: 48px; font-weight: 600; color: #2D2A24; line-height: 1.45; letter-spacing: 0.3px; text-align: left; }
+      .hl-bounce { display: inline; font-weight: 800; color: #F97316; animation: bounce-word 2.5s infinite ease-in-out; }
+      .hl-gradient { display: inline; font-weight: 900; background: linear-gradient(135deg, #F97316, #FF6B6B); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; position: relative; }
+      .hl-gradient::after { content: ""; position: absolute; bottom: 2px; left: 0; width: 100%; height: 5px; background: linear-gradient(90deg, #F97316, #FF6B6B); border-radius: 3px; opacity: 0.4; }
+      .hl-marker { display: inline; font-weight: 800; background: linear-gradient(180deg, transparent 55%, #FEF08A 55%); padding: 0 6px; color: #854D0E; }
+      .hl-glow { display: inline; font-weight: 800; color: #6366F1; text-shadow: 0 0 20px rgba(99,102,241,0.3), 0 0 40px rgba(99,102,241,0.15); }
+      .hl-underline { display: inline; font-weight: 800; color: #0891B2; border-bottom: 3px solid #0891B2; padding-bottom: 2px; }
+      @keyframes bounce-word { 0%, 100% { transform: translateY(0) rotate(-1deg); } 50% { transform: translateY(-10px) rotate(-2deg); } }
+      .bottom-area { position: absolute; bottom: 50px; left: 36px; right: 36px; display: flex; align-items: center; gap: 20px; z-index: 10; }
+      .waveform-bars { display: flex; align-items: center; gap: 3px; flex: 1; height: 24px; }
+      .waveform-bars .bar { flex: 1; height: 100%; background: linear-gradient(to top, #F97316 0%, transparent 100%); border-radius: 2px; opacity: 0.2; animation: waveBar 1.5s ease-in-out infinite alternate; }
+      .waveform-bars .bar:nth-child(odd) { animation-delay: 0.3s; }
+      .waveform-bars .bar:nth-child(3n) { animation-delay: 0.6s; }
+      @keyframes waveBar { 0% { transform: scaleY(0.3); } 100% { transform: scaleY(1); } }
+      .footer-progress { position: absolute; bottom: 50px; left: 36px; right: 36px; height: 2px; background: #E6DDD2; border-radius: 2px; z-index: 9; overflow: hidden; }
+      .footer-progress .bar { height: 100%; width: 11%; background: linear-gradient(90deg, #F97316, #FF6B6B); border-radius: 2px; }
+    </style>
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+    <div class="dot-grid"></div>
+    <div class="watermark">CHANNEL</div>
+    <div class="watermark watermark-bottom">CHANNEL</div>
+    <div class="deco-icon icon-1">🎙️</div>
+    <div class="deco-icon icon-2">🎧</div>
+    <div class="deco-icon icon-3">🤗</div>
+    <div class="deco-icon icon-4">✨</div>
+    <div class="deco-icon icon-5">💡</div>
+    <div class="deco-icon icon-6">🌟</div>
+    <div class="top-bar">
+      <div class="podcast-brand">
+        <div class="wave-icon"><span></span><span></span><span></span><span></span><span></span></div>
+        <span>PODCAST</span>
+      </div>
+      <div class="sentence-counter">001 / 9</div>
+    </div>
+    <div class="main-content">
+      <div class="character-wrapper">
+        <img class="character-img" src="assets/scene-001.png" alt="" />
+      </div>
+      <div class="text-area">
+        <div class="main-sentence">What's up guys, welcome back to my <span class="hl-bounce">channel</span>.</div>
+      </div>
+    </div>
+    <div class="bottom-area">
+      <div class="waveform-bars"><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div></div>
+    </div>
+    <div class="footer-progress"><div class="bar"></div></div>
+    <script>
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true });
+      tl.from(".main-content", { y: 30, opacity: 0, duration: 0.6, ease: "power3.out" }, 0);
+      tl.from(".top-bar", { y: -20, opacity: 0, duration: 0.4, ease: "power3.out" }, 0);
+      tl.from(".bottom-area", { opacity: 0, duration: 0.4, ease: "power3.out" }, 0.15);
+      tl.from(".footer-progress", { scaleX: 0, opacity: 0, duration: 0.4, ease: "power3.out" }, 0.15);
+      tl.from(".icon-1", { scale: 0, opacity: 0, duration: 0.4, ease: "back.out(1.4)" }, 0.15);
+      tl.from(".icon-2", { scale: 0, opacity: 0, duration: 0.4, ease: "back.out(1.4)" }, 0.2);
+      tl.from(".icon-3", { scale: 0, opacity: 0, duration: 0.4, ease: "back.out(1.4)" }, 0.1);
+      tl.from(".icon-4", { scale: 0, opacity: 0, duration: 0.4, ease: "back.out(1.4)" }, 0.2);
+      tl.from(".watermark", { x: -40, opacity: 0, duration: 0.8, ease: "power3.out" }, 0);
+      tl.from(".watermark-bottom", { x: 40, opacity: 0, duration: 0.8, ease: "power3.out" }, 0.1);
+      tl.to(".main-content", { y: -20, opacity: 0, duration: 0.35, ease: "power2.in" }, "-=0.15");
+      tl.to(".top-bar", { y: -15, opacity: 0, duration: 0.3, ease: "power2.in" }, "-=0.1");
+      tl.to(".bottom-area", { opacity: 0, duration: 0.3, ease: "power2.in" }, "-=0.1");
+      tl.to(".footer-progress", { scaleX: 0, opacity: 0, duration: 0.3, ease: "power2.in" }, "-=0.1");
+      tl.to(".icon-1", { scale: 0, opacity: 0, duration: 0.3, ease: "power2.in" }, "-=0.1");
+      tl.to(".icon-2", { scale: 0, opacity: 0, duration: 0.3, ease: "power2.in" }, "-=0.1");
+      tl.to(".watermark", { x: -30, opacity: 0, duration: 0.4, ease: "power2.in" }, "-=0.15");
+      tl.to(".watermark-bottom", { x: 30, opacity: 0, duration: 0.4, ease: "power2.in" }, "-=0.15");
+      window.__timelines["scene-001"] = tl;
+    </script>
+  </div>
+</template>
