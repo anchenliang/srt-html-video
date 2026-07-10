@@ -44,6 +44,9 @@ ffmpeg -version     # 可用即可
 - **macOS**：`brew install ffmpeg`
 - **Linux**：`sudo apt install ffmpeg`
 
+推荐使用安装工具进行安装FFmpeg：工具地址：[https://github.com/oop7/ffmpeg-install-guide/releases](https://github.com/oop7/ffmpeg-install-guide/releases) 
+
+
 ### 3. 一键生成视频
 
 ```bash
