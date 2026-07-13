@@ -5,10 +5,12 @@ npm-cache/
 
 # Generated projects
 projects/
+global_node_modules/
 
 # Python cache
 __pycache__/
 *.pyc
+*.srt
 
 # Temp build files
 _add_poses.py

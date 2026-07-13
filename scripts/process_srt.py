@@ -1,5 +1,5 @@
 ﻿"""
-process_srt.py — One-click SRT to HyperFrames video
+process_srt.py — One-click SRT to HyperFrames video (global node_modules)
 
 Usage:
     python scripts/process_srt.py path/to/your.srt
@@ -7,25 +7,77 @@ Usage:
 Steps (all automated):
     1. Parse SRT -> srt_data.json
     2. Generate scene HTML files + index.html + hyperframes.json
-    3. Create package.json + npm install
+    3. Create package.json + link shared node_modules
     4. Render to MP4
 """
 
 import argparse, json, os, sys, subprocess, re, shutil
 
-SCRIPTS_DIR = os.path.dirname(os.path.abspath(__file__))
-PROJECTS_DIR = os.path.join(os.path.dirname(SCRIPTS_DIR), "projects")
-TEMPLATES_DIR = os.path.join(os.path.dirname(SCRIPTS_DIR), "templates")
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+SCRIPTS_DIR = os.path.join(ROOT_DIR, "scripts")
+PROJECTS_DIR = os.path.join(ROOT_DIR, "projects")
+TEMPLATES_DIR = os.path.join(ROOT_DIR, "templates")
+GLOBAL_NM_DIR = os.path.join(ROOT_DIR, "global_node_modules")
 DEFAULT_TEMPLATE = os.path.join(TEMPLATES_DIR, "podcast-enhanced-template.html")
 
-PACKAGE_JSON = json.dumps({
-    "name": "srt-html-video",
-    "version": "1.0.0",
-    "private": True,
-    "dependencies": {
-        "hyperframes": "^0.7.39"
-    }
-}, indent=2)
+
+def ensure_global_deps():
+    """Ensure the shared node_modules exists with hyperframes installed."""
+    nm_path = os.path.join(GLOBAL_NM_DIR, "node_modules")
+    bin_path = os.path.join(nm_path, ".bin", "hyperframes")
+
+    if os.path.isdir(nm_path) and (os.path.isfile(bin_path) or os.path.islink(bin_path)):
+        return  # already set up
+
+    print(f"  [setup] Initializing shared node_modules in {GLOBAL_NM_DIR}...")
+    os.makedirs(GLOBAL_NM_DIR, exist_ok=True)
+
+    # Create package.json if missing
+    pkg_path = os.path.join(GLOBAL_NM_DIR, "package.json")
+    if not os.path.isfile(pkg_path):
+        pkg = {
+            "name": "global-hyperframes",
+            "version": "1.0.0",
+            "private": True,
+            "dependencies": {"hyperframes": "^0.7.39"}
+        }
+        with open(pkg_path, "w", encoding="utf-8") as f:
+            json.dump(pkg, f, indent=2)
+            f.write("\n")
+
+    # npm install (only once)
+    run_cmd(["npm", "install"], cwd=GLOBAL_NM_DIR)
+
+
+def link_node_modules(hf_dir):
+    """Replace per-project node_modules with a junction to the shared one."""
+    nm_path = os.path.join(hf_dir, "node_modules")
+
+    # Remove existing node_modules (real dir or broken link)
+    if os.path.isdir(nm_path) or os.path.islink(nm_path):
+        try:
+            if os.path.islink(nm_path):
+                os.unlink(nm_path)
+            else:
+                shutil.rmtree(nm_path, ignore_errors=True)
+        except Exception:
+            pass
+
+    # Create junction pointing to global node_modules
+    target = os.path.join(GLOBAL_NM_DIR, "node_modules")
+    if not os.path.isdir(target):
+        print("  [WARNING] Shared node_modules not found, running setup...")
+        ensure_global_deps()
+
+    # Use mklink /J (junction) on Windows
+    print(f"  Linking node_modules -> {target}")
+    result = subprocess.run(
+        ["cmd", "/c", "mklink", "/J", nm_path, target],
+        capture_output=True, text=True, shell=True
+    )
+    if result.returncode != 0:
+        print(f"  [WARNING] Junction creation failed: {result.stderr.strip()}")
+        print(f"  Falling back to copying package.json only (npx will install on demand)")
 
 
 def get_project_name(srt_path):
@@ -106,19 +158,25 @@ def main():
 
     shutil.copy2(srt_path, proj_dir)
 
-    # Step 2.5: Create package.json if missing
+    # Step 3: Shared node_modules (lazy init + junction)
+    print("\n[3/4] Setting up shared dependencies...")
+    ensure_global_deps()
+
+    # Create package.json in project dir (needed by npx)
     pkg_path = os.path.join(hf_dir, "package.json")
     if not os.path.isfile(pkg_path):
+        pkg = {
+            "name": os.path.basename(hf_dir),
+            "version": "1.0.0",
+            "private": True,
+            "dependencies": {"hyperframes": "^0.7.39"}
+        }
         with open(pkg_path, "w", encoding="utf-8") as f:
-            f.write(PACKAGE_JSON + "\n")
+            json.dump(pkg, f, indent=2)
+            f.write("\n")
 
-    # Step 3: npm install
-    print("\n[3/4] Installing dependencies (npm install)...")
-    node_modules = os.path.join(hf_dir, "node_modules")
-    if not os.path.isdir(node_modules):
-        run_cmd(["npm", "install"], cwd=hf_dir)
-    else:
-        print("  (node_modules already exists, skipping)")
+    # Link project node_modules -> shared node_modules
+    link_node_modules(hf_dir)
 
     # Step 4: Render
     output_name = args.output or f"renders/{project_name}.mp4"
