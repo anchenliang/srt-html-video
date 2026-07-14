@@ -1,4 +1,11 @@
-﻿import re, json, os, sys, argparse, random, shutil
+﻿#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+import re, json, os, sys, argparse, random, shutil
+
+# ===== 配置：GSAP 版本 =====
+GSAP_VERSION = "3.14.2"
+GSAP_REL_PATH = f"gsap/{GSAP_VERSION}/gsap.min.js"
 
 STOP_WORDS = {"a","an","the","and","or","but","in","on","at","to","for","of","with","by",
               "that","this","it","is","are","was","were","be","been","being","have","has","had",
@@ -189,7 +196,7 @@ def main():
         '<div data-composition-id="main-comp" data-start="0" data-width="1920" data-height="1080">'
     ]
 
-    # Setup: copy random images from allPicture/ into assets/
+    # Setup: copy random images from allPicture/ into assets/ (duplicated block - kept for safety)
     allpic_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "allPicture")
     assets_dir = os.path.join(args.output, "assets")
     has_images = False
@@ -199,7 +206,6 @@ def main():
         if all_images:
             has_images = True
             os.makedirs(assets_dir, exist_ok=True)
-            # Pick N random images (one per scene, with replacement if more scenes than images)
             picked = random.choices(all_images, k=total) if total > len(all_images) else random.sample(all_images, total)
             for pi, fname in enumerate(picked):
                 src_path = os.path.join(allpic_dir, fname)
@@ -225,8 +231,11 @@ def main():
             f'data-track-index="0"></div>'
         )
 
+    # ===== 使用本地 GSAP，并添加 onerror 回退到 CDN =====
+    # 如果本地文件加载失败（例如文件缺失或损坏），浏览器会自动尝试从 CDN 加载
+    cdn_url = f"https://cdn.jsdelivr.net/npm/gsap@{GSAP_VERSION}/dist/gsap.min.js"
     index_lines.extend([
-        '<script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>',
+        f'<script src="{GSAP_REL_PATH}" onerror="this.onerror=null;this.src=\'{cdn_url}\'"></script>',
         '<script>',
         'window.__timelines=window.__timelines||{};',
         'const tl=gsap.timeline({paused:true});',
@@ -241,6 +250,23 @@ def main():
     with open(index_path, "w", encoding="utf-8") as f:
         f.write("\n".join(index_lines))
 
+    # ===== 尝试复制本地 gsap.min.js 到输出目录 =====
+    # 即使复制失败，只要 CDN 可用，渲染仍然能够继续（因为有 onerror 回退）
+    root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    gsap_src = os.path.join(root_dir, GSAP_REL_PATH.replace('/', os.sep))
+    gsap_dst_dir = os.path.join(args.output, "gsap", GSAP_VERSION)
+    gsap_dst = os.path.join(gsap_dst_dir, "gsap.min.js")
+
+    if os.path.isfile(gsap_src):
+        os.makedirs(gsap_dst_dir, exist_ok=True)
+        shutil.copy2(gsap_src, gsap_dst)
+        print(f"  Copied GSAP {GSAP_VERSION} to project (local fallback available).")
+    else:
+        print(f"  [INFO] Local gsap.min.js not found at {gsap_src}.")
+        print(f"  Will rely on CDN (onerror fallback) for GSAP loading.")
+        print(f"  To enable offline use, download from {cdn_url} and place it at {gsap_src}")
+
+    # Write hyperframes.json
     hf = {
         "name": os.path.basename(args.output),
         "version": "1.0.0",
