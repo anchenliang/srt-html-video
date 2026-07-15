@@ -19,8 +19,9 @@ from video_renderer import render_srt_to_video
 from concat_videos import concat_project
 
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+SCRIPTS_DIR = os.path.dirname(os.path.abspath(__file__))        # 已有定义，可直接使用
 PROJECTS_DIR = os.path.join(ROOT_DIR, "projects")
-TEMPLATES_DIR = os.path.join(ROOT_DIR, "templates")
+TEMPLATES_DIR = os.path.join(SCRIPTS_DIR, "templates")
 DEFAULT_TEMPLATE = os.path.join(TEMPLATES_DIR, "podcast-enhanced-template.html")
 
 # 配置文件放在 scripts 目录下

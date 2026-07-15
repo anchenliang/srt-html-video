@@ -6,6 +6,7 @@ npm-cache/
 # Generated projects
 projects/
 global_node_modules/
+output/
 
 # Python cache
 __pycache__/

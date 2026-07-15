@@ -2,5 +2,5 @@
   "split_parts": 30,
   "quality": "standard",
   "workers": 1,
-  "template": "templates/podcast-enhanced-template.html"
+  "template": "scripts/templates/podcast-enhanced-template.html"
 }
