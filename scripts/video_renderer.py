@@ -7,7 +7,6 @@ Handles parsing, scene generation, dependency setup, and rendering.
 import json, os, sys, subprocess, shutil
 
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-#CRIPTS_DIR = os.path.join(ROOT_DIR, "scripts")
 SCRIPTS_DIR = os.path.dirname(os.path.abspath(__file__))
 GLOBAL_NM_DIR = os.path.join(ROOT_DIR, "global_node_modules")
 
@@ -80,7 +79,7 @@ def run_cmd(cmd, cwd=None):
 
 # ---------- 核心渲染函数 ----------
 def render_srt_to_video(srt_path, project_parent_dir, video_output_path,
-                        template_path, title, quality):
+                        template_path, title, quality, workers=1):
     """
     处理单个 SRT 文件：解析 → 生成场景 → 渲染视频。
     所有输出均放在 project_parent_dir 下。
@@ -141,12 +140,12 @@ def render_srt_to_video(srt_path, project_parent_dir, video_output_path,
 
     link_node_modules(hf_dir)
 
-    # 4. 渲染视频
-    print(f"\n[4/4] Rendering video ({quality} quality)...")
+    # 4. 渲染视频（使用传入的 workers）
+    print(f"\n[4/4] Rendering video ({quality} quality, {workers} worker(s))...")
     render_cmd = [
         "npx", "hyperframes", "render",
         "--output", video_output_path,
-        "--gpu", "--workers", "1",
+        "--gpu", "--workers", str(workers),
         "--quality", quality
     ]
     code = run_cmd(render_cmd, cwd=hf_dir)

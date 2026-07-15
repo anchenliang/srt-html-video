@@ -5,12 +5,14 @@ Usage:
     python scripts/main.py path/to/your.srt
 
 Features:
+    - Reads config.json for default parameters
+    - Command-line arguments override config values
     - Splits SRT into parts (configurable lines per part)
     - Serially processes each part (render to MP4)
     - Generates a summary.txt with parameters, frame counts, durations, etc.
 """
 
-import argparse, os, sys, time, datetime, subprocess, shutil
+import argparse, os, sys, time, datetime, subprocess, json
 from process_srt import split_srt_file, clean_filename
 from video_renderer import render_srt_to_video
 
@@ -18,6 +20,32 @@ ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PROJECTS_DIR = os.path.join(ROOT_DIR, "projects")
 TEMPLATES_DIR = os.path.join(ROOT_DIR, "templates")
 DEFAULT_TEMPLATE = os.path.join(TEMPLATES_DIR, "podcast-enhanced-template.html")
+#CONFIG_PATH = os.path.join(ROOT_DIR, "config.json")
+
+# 配置文件放在 scripts 目录下
+SCRIPTS_DIR = os.path.dirname(os.path.abspath(__file__))
+CONFIG_PATH = os.path.join(SCRIPTS_DIR, "config.json")
+
+
+def load_config():
+    """Load configuration from config.json, return dict with defaults."""
+    default_config = {
+        "split_parts": 30,
+        "quality": "standard",
+        "workers": 1,
+        "template": DEFAULT_TEMPLATE
+    }
+    if os.path.isfile(CONFIG_PATH):
+        try:
+            with open(CONFIG_PATH, 'r', encoding='utf-8') as f:
+                user_config = json.load(f)
+            # Merge, user config overrides defaults
+            default_config.update(user_config)
+        except Exception as e:
+            print(f"  [WARNING] Failed to load config.json: {e}. Using defaults.")
+    else:
+        print(f"  [INFO] config.json not found. Using default values.")
+    return default_config
 
 def get_video_info(filepath):
     """
@@ -81,16 +109,33 @@ def format_time_sec(seconds):
         return f"{h}h {m}m {s:.1f}s"
 
 def main():
+    # 加载配置
+    config = load_config()
+
     parser = argparse.ArgumentParser(
         description="Process an SRT file into multiple HyperFrames videos (one-click)")
     parser.add_argument("input", help="Path to the .srt file")
-    parser.add_argument("--template", default=DEFAULT_TEMPLATE,
-                        help="Path to template HTML file")
+    parser.add_argument("--template", default=config.get("template"),
+                        help="Path to template HTML file (overrides config)")
     parser.add_argument("--title", help="Base title for all parts")
-    parser.add_argument("--quality", choices=["draft", "standard", "high"], default="standard")
-    parser.add_argument("--split-parts", type=int, default=30,
-                        help="Number of subtitles per part (default: 30)")
+    parser.add_argument("--quality", choices=["draft", "standard", "high"],
+                        default=config.get("quality"),
+                        help="Render quality (overrides config)")
+    parser.add_argument("--split-parts", type=int,
+                        default=config.get("split_parts"),
+                        help="Number of subtitles per part (overrides config)")
+    parser.add_argument("--workers", type=int,
+                        default=config.get("workers"),
+                        help="Number of parallel render workers (overrides config)")
     args = parser.parse_args()
+
+    # 如果配置未提供，使用硬编码默认值（以防万一）
+    if args.split_parts is None:
+        args.split_parts = 30
+    if args.quality is None:
+        args.quality = "standard"
+    if args.workers is None:
+        args.workers = 1
 
     if not os.path.isfile(args.input):
         print(f"Error: SRT file not found -> {args.input}", file=sys.stderr)
@@ -125,6 +170,7 @@ def main():
         f.write(f"Title             : {title}\n")
         f.write(f"Split lines/part  : {args.split_parts}\n")
         f.write(f"Quality           : {args.quality}\n")
+        f.write(f"Workers           : {args.workers}\n")
         f.write(f"Template          : {args.template}\n")
         f.write(f"Total parts       : {total_parts}\n")
         f.write(f"Generation started: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
@@ -151,7 +197,8 @@ def main():
             video_output_path=video_output,
             template_path=os.path.abspath(args.template),
             title=part_title,
-            quality=args.quality
+            quality=args.quality,
+            workers=args.workers  # 传入 workers
         )
         end_time = time.time()
         elapsed = end_time - start_time
