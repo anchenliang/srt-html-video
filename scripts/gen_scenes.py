@@ -130,7 +130,7 @@ def main():
         scene_start = entry["start"]
         scene_end = entry["end"]
         scene_duration = max(0.5, round(scene_end - scene_start, 3))
-        exit_time = round(max(0.5, scene_duration - 0.5), 2)
+        exit_time = round(max(0.5, scene_duration - 0.2), 2)
 
         # Highlight
         pattern = re.compile(re.escape(keyword), re.IGNORECASE)
