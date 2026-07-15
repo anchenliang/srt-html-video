@@ -10,22 +10,22 @@ Features:
     - Splits SRT into parts (configurable lines per part)
     - Serially processes each part (render to MP4)
     - Generates a summary.txt with parameters, frame counts, durations, etc.
+    - Concatenates all parts into all.mp4 after successful generation.
 """
 
 import argparse, os, sys, time, datetime, subprocess, json
 from process_srt import split_srt_file, clean_filename
 from video_renderer import render_srt_to_video
+from concat_videos import concat_project
 
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PROJECTS_DIR = os.path.join(ROOT_DIR, "projects")
 TEMPLATES_DIR = os.path.join(ROOT_DIR, "templates")
 DEFAULT_TEMPLATE = os.path.join(TEMPLATES_DIR, "podcast-enhanced-template.html")
-#CONFIG_PATH = os.path.join(ROOT_DIR, "config.json")
 
 # 配置文件放在 scripts 目录下
 SCRIPTS_DIR = os.path.dirname(os.path.abspath(__file__))
 CONFIG_PATH = os.path.join(SCRIPTS_DIR, "config.json")
-
 
 def load_config():
     """Load configuration from config.json, return dict with defaults."""
@@ -39,7 +39,6 @@ def load_config():
         try:
             with open(CONFIG_PATH, 'r', encoding='utf-8') as f:
                 user_config = json.load(f)
-            # Merge, user config overrides defaults
             default_config.update(user_config)
         except Exception as e:
             print(f"  [WARNING] Failed to load config.json: {e}. Using defaults.")
@@ -48,10 +47,7 @@ def load_config():
     return default_config
 
 def get_video_info(filepath):
-    """
-    尝试使用 ffprobe 获取视频的帧数。
-    如果失败则返回 None。
-    """
+    """尝试使用 ffprobe 获取视频的帧数。如果失败则返回 None。"""
     if not os.path.isfile(filepath):
         return None
     try:
@@ -109,7 +105,6 @@ def format_time_sec(seconds):
         return f"{h}h {m}m {s:.1f}s"
 
 def main():
-    # 加载配置
     config = load_config()
 
     parser = argparse.ArgumentParser(
@@ -198,12 +193,11 @@ def main():
             template_path=os.path.abspath(args.template),
             title=part_title,
             quality=args.quality,
-            workers=args.workers  # 传入 workers
+            workers=args.workers
         )
         end_time = time.time()
         elapsed = end_time - start_time
 
-        # 收集信息
         record = {
             "part": part_num,
             "video": video_output,
@@ -214,7 +208,6 @@ def main():
         }
 
         if success:
-            # 获取视频信息
             frames = get_video_info(video_output)
             record["frames"] = frames if frames is not None else "N/A"
             try:
@@ -231,7 +224,6 @@ def main():
 
         part_records.append(record)
 
-        # 立即追加到 summary.txt（即使失败也保存已有信息）
         with open(summary_path, 'a', encoding='utf-8') as f:
             f.write(f"Part {part_num}:\n")
             f.write(f"  Video           : {os.path.basename(video_output)}\n")
@@ -247,7 +239,6 @@ def main():
             f.write("\n")
 
         if not success:
-            # 写入失败信息后退出
             print(f"\n[FATAL] Aborted at Part {part_num}. Check summary.txt for details.", file=sys.stderr)
             sys.exit(1)
 
@@ -258,9 +249,24 @@ def main():
         f.write(f"Completion time: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
         f.write("=" * 60 + "\n")
 
+    # 拼接所有 part 为 all.mp4
+    print("\n" + "=" * 50)
+    print("  Concatenating parts into all.mp4...")
+    success, all_path = concat_project(video_output_root, overwrite=True)
+    if success:
+        print(f"  All parts concatenated successfully: {all_path}")
+        # 在 summary.txt 中记录拼接信息
+        with open(summary_path, 'a', encoding='utf-8') as f:
+            f.write(f"\nConcatenated video: {all_path}\n")
+    else:
+        print("  [WARNING] Concatenation failed, but individual parts are available.", file=sys.stderr)
+    print("=" * 50)
+
     print("\n" + "=" * 50)
     print(f"  All parts processed successfully. Videos saved in: {video_output_root}")
     print(f"  Summary log: {summary_path}")
+    if success:
+        print(f"  Concatenated video: {all_path}")
     print("=" * 50)
 
 if __name__ == "__main__":
