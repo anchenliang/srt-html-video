@@ -3,7 +3,7 @@
 
 将 SRT 字幕文件一键转换为带动效的全高清视频。纯本地运行，无需 AI、无需联网。
 
-## 效果
+## 一、效果
 
 - 暖色毛玻璃背景 + 毛绒光晕
 - 居中大字英文字幕，每次一个单词高亮（5 种动效轮流）
@@ -12,7 +12,7 @@
 - 1920×1080 全高清 MP4
 - 支持长字幕自动分段，分段视频自动拼接
 
-## 环境要求
+## 二、环境要求
 
 | 工具 | 版本要求 | 说明 |
 |---|---|---|
@@ -27,7 +27,7 @@
 pip install customtkinter
 ```
 
-## 快速开始
+## 三、快速开始
 
 ### 1. 克隆项目
 
@@ -80,25 +80,8 @@ python scripts/gui.py
 - 在线调整分段行数、渲染质量、工作线程数、模板路径
 - 完成后一键打开输出文件夹
 
-### 完整示例（命令行）
-
-```bash
-python scripts/main.py my-talk.srt --title "My Podcast" --quality draft --split-parts 50 --workers 2
-```
-
-### 参数说明（命令行）
-
-| 参数 | 说明 | 默认值 |
-|---|---|---|
-| `--title` | 视频标题 | 由文件名自动生成 |
-| `--quality` | 渲染质量：`draft` / `standard` / `high` | `standard` |
-| `--split-parts` | 每个分段包含的字幕条数 | `30` |
-| `--workers` | 并行渲染工作线程数 | `1` |
-| `--template` | 自定义模板 HTML 路径 | `scripts/templates/podcast-enhanced-template.html` |
-
-> 若在 GUI 中修改参数，仅本次运行生效；如需永久修改，请编辑 `scripts/config.json`。
-
-## 输出与文件结构
+##  四、项目结构介绍
+### 输出与文件结构
 
 ```
 output/video/<clean_name>/
@@ -109,7 +92,7 @@ output/video/<clean_name>/
 └── summary.txt        # 生成记录（参数、时长、帧数等）
 ```
 
-## 项目结构
+### 项目结构
 
 ```
 ├── scripts/
@@ -130,34 +113,14 @@ output/video/<clean_name>/
 └── gsap/                      ← 本地 GSAP 库（CDN 备用）
 ```
 
-## 自定义画面风格
 
-编辑 `scripts/templates/podcast-enhanced-template.html`，修改颜色、字体、布局、动画等，所有场景会自动继承。
 
-```bash
-# 使用自定义模板（命令行）
-python scripts/main.py my-talk.srt --template my-style.html
-```
 
-## 手动逐步执行（分步调试）
+## 五、常见问题
 
-```bash
-# 1. 解析 SRT
-python scripts/parse_srt.py input.srt projects/my-video/srt_data.json
+**Q：如何自定义画面风格**
+A:编辑 `scripts/templates/podcast-enhanced-template.html`，修改颜色、字体、布局、动画等，所有场景会自动继承。
 
-# 2. 生成场景
-python scripts/gen_scenes.py \
-    --data projects/my-video/srt_data.json \
-    --template scripts/templates/podcast-enhanced-template.html \
-    --output projects/my-video/srt-html-video \
-    --title "My Video"
-
-# 3. 渲染
-cd projects/my-video/srt-html-video
-npx hyperframes render --output renders/final.mp4 --gpu --workers 2
-```
-
-## 常见问题
 
 **Q：渲染报错 `UnicodeEncodeError: 'gbk' codec can't encode character`**  
 A：已修复于最新代码，如仍出现，请在命令行执行前设置 `set PYTHONIOENCODING=utf-8`。
