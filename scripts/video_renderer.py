@@ -70,8 +70,15 @@ def run_cmd(cmd, cwd=None):
                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                                text=False, bufsize=0)
     for raw_line in process.stdout:
-        line = raw_line.decode('utf-8', errors='replace')
-        print(line, end='')
+        # 解码为 UTF-8，忽略错误
+        try:
+            line = raw_line.decode('utf-8', errors='replace')
+        except UnicodeDecodeError:
+            line = raw_line.decode('gbk', errors='replace')
+        # 直接写入二进制流，避免控制台编码问题
+        sys.stdout.buffer.write(line.encode('utf-8', errors='replace'))
+        sys.stdout.buffer.write(b'\n')
+        sys.stdout.buffer.flush()
     process.wait()
     if process.returncode != 0:
         print(f"  [WARNING] Command exited with code {process.returncode}")
