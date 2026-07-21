@@ -253,7 +253,13 @@ def main():
     # 拼接所有 part 为 all.mp4
     print("\n" + "=" * 50)
     print("  Concatenating parts into all.mp4...")
-    success, all_path = concat_project(video_output_root, overwrite=True)
+    #success, all_path = concat_project(video_output_root, overwrite=True)
+    success, all_path = concat_project(
+        video_output_root,
+        overwrite=True,
+        srt_path=srt_path,          # 传入原始 SRT 路径
+        split_parts=args.split_parts
+    )    
     if success:
         print(f"  All parts concatenated successfully: {all_path}")
         # 在 summary.txt 中记录拼接信息
