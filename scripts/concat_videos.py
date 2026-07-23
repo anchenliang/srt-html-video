@@ -75,6 +75,16 @@ def get_video_params(filepath):
     return width, height, fps, pix_fmt
 
 
+def get_video_duration(filepath):
+    """返回视频的实际时长（秒）"""
+    cmd = [
+        'ffprobe', '-v', 'error', '-show_entries', 'format=duration',
+        '-of', 'default=noprint_wrappers=1:nokey=1', filepath
+    ]
+    result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+    return float(result.stdout.strip())
+
+
 def generate_freeze_frame_clip(input_video, output_path, duration, params):
     """
     Generate a short MP4 video of duration `duration` seconds by freezing the last frame of `input_video`.
@@ -118,7 +128,6 @@ def generate_freeze_frame_clip(input_video, output_path, duration, params):
             raise RuntimeError(f"Failed to extract last frame from {input_video}")
 
     # 生成冻结帧视频
-    # 使用 libx264 编码，保证兼容性
     encode_cmd = [
         'ffmpeg', '-y', '-loop', '1', '-i', last_frame_png,
         '-c:v', 'libx264', '-preset', 'ultrafast',
@@ -158,47 +167,69 @@ def concat_with_freeze_frames(part_files, output_path, srt_path, split_parts):
 
     if len(part_files) != len(ranges):
         print(f"  Warning: number of part files ({len(part_files)}) does not match number of time ranges ({len(ranges)})", file=sys.stderr)
-        # Fall back to direct concatenation
         return concat_videos_direct(part_files, output_path)
 
-    # Get video parameters from first part (assume all parts share same params)
+    # 获取每个part视频的实际时长
+    part_durations = []
+    for f in part_files:
+        try:
+            dur = get_video_duration(f)
+        except Exception as e:
+            print(f"  [ERROR] Failed to get duration for {f}: {e}", file=sys.stderr)
+            return False
+        part_durations.append(dur)
+
+    # 计算每个part对应的SRT段落时长（以第一句起始为0）
+    srt_durations = [end - start for start, end in ranges]
+
+    # 计算偏差 (actual - srt)
+    deltas = [actual - srt for actual, srt in zip(part_durations, srt_durations)]
+
+    # 打印调试信息
+    print("  Part | SRT duration | Actual duration | Delta")
+    for i, (srt_d, act_d, delta) in enumerate(zip(srt_durations, part_durations, deltas), 1):
+        print(f"  {i:4d} | {srt_d:12.3f}s | {act_d:15.3f}s | {delta:8.3f}s")
+
+    # 获取视频参数
     params = get_video_params(part_files[0])
 
-    # Prepare list file
     list_file = os.path.join(os.path.dirname(output_path), "concat_list.txt")
     freeze_files = []
     with open(list_file, 'w', encoding='utf-8') as f:
         for i, part_file in enumerate(part_files):
-            # Add current part
             escaped = part_file.replace("'", "'\\''")
             f.write(f"file '{escaped}'\n")
 
-            # If not last part, compute gap and insert freeze frame
             if i < len(part_files) - 1:
                 end_current = ranges[i][1]
                 start_next = ranges[i+1][0]
                 gap = start_next - end_current
-                if gap > 0.01:  # ignore tiny gaps
-                    # Generate freeze-frame clip for this gap
+                # 补偿当前part的偏差：实际结束时间 = end_current + deltas[i]
+                # 需要插入的冻结帧时长 = start_next - (end_current + deltas[i]) = gap - deltas[i]
+                effective_gap = gap - deltas[i]
+                if effective_gap < 0:
+                    print(f"  [WARN] Negative effective gap for part {i+1}: {effective_gap:.3f}s, setting to 0")
+                    effective_gap = 0
+                if effective_gap > 0.01:
                     freeze_file = os.path.join(os.path.dirname(output_path), f"freeze_{i}.mp4")
-                    print(f"  Generating freeze frame for gap {gap:.3f}s using {os.path.basename(part_file)}")
-                    generate_freeze_frame_clip(part_file, freeze_file, gap, params)
+                    print(f"  Generating freeze frame for effective gap {effective_gap:.3f}s (original gap {gap:.3f}s, delta {deltas[i]:.3f}s)")
+                    generate_freeze_frame_clip(part_file, freeze_file, effective_gap, params)
                     escaped_freeze = freeze_file.replace("'", "'\\''")
                     f.write(f"file '{escaped_freeze}'\n")
                     freeze_files.append(freeze_file)
 
-    # Execute concat
+    # 执行concat
     cmd = [
         "ffmpeg", "-y", "-f", "concat", "-safe", "0",
         "-i", list_file,
         "-c", "copy",
         output_path
     ]
-    print(f"  Concatenating {len(part_files)} parts with freeze frames...")
+    print(f"  Concatenating {len(part_files)} parts with adjusted freeze frames...")
     print(f"> {' '.join(cmd)}")
     result = subprocess.run(cmd, capture_output=True, text=True)
 
-    # Clean up temporary freeze files and list file
+    # 清理临时冻结帧和列表文件
     for f in freeze_files:
         if os.path.isfile(f):
             os.remove(f)
