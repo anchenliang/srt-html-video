@@ -11,9 +11,10 @@ Features:
     - Serially processes each part (render to MP4)
     - Generates a summary.txt with parameters, frame counts, durations, etc.
     - Concatenates all parts into all.mp4 after successful generation.
+    - Copies all.mp4 to output/video_all/{clean_name}_all.mp4
 """
 
-import argparse, os, sys, time, datetime, subprocess, json
+import argparse, os, sys, time, datetime, subprocess, json, shutil
 from process_srt import split_srt_file, clean_filename
 from video_renderer import render_srt_to_video
 from concat_videos import concat_project
@@ -253,18 +254,28 @@ def main():
     # 拼接所有 part 为 all.mp4
     print("\n" + "=" * 50)
     print("  Concatenating parts into all.mp4...")
-    #success, all_path = concat_project(video_output_root, overwrite=True)
     success, all_path = concat_project(
         video_output_root,
         overwrite=True,
-        srt_path=srt_path,          # 传入原始 SRT 路径
+        srt_path=srt_path,
         split_parts=args.split_parts
-    )    
+    )
     if success:
         print(f"  All parts concatenated successfully: {all_path}")
         # 在 summary.txt 中记录拼接信息
         with open(summary_path, 'a', encoding='utf-8') as f:
             f.write(f"\nConcatenated video: {all_path}\n")
+
+        # ===== 新增：复制 all.mp4 到 output/video_all =====
+        video_all_dir = os.path.join(ROOT_DIR, "output", "video_all")
+        os.makedirs(video_all_dir, exist_ok=True)
+        dst_filename = f"{clean_name}_all.mp4"
+        dst_path = os.path.join(video_all_dir, dst_filename)
+        try:
+            shutil.copy2(all_path, dst_path)
+            print(f"  Copied all.mp4 to: {dst_path}")
+        except Exception as e:
+            print(f"  [WARNING] Failed to copy all.mp4: {e}", file=sys.stderr)
     else:
         print("  [WARNING] Concatenation failed, but individual parts are available.", file=sys.stderr)
     print("=" * 50)
@@ -274,6 +285,7 @@ def main():
     print(f"  Summary log: {summary_path}")
     if success:
         print(f"  Concatenated video: {all_path}")
+        print(f"  Copy saved to: {dst_path}")
     print("=" * 50)
 
 if __name__ == "__main__":
