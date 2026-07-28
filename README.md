@@ -62,9 +62,21 @@ pip install customtkinter
 
 #### 方式一：命令行（适合脚本集成）
 
+**单文件处理**：
 ```bash
 python scripts/main.py 你的字幕文件.srt
 ```
+
+**批量处理目录**（处理目录下所有 `.srt` 文件）：
+```bash
+python scripts/main.py --dir 字幕文件夹
+```
+可选参数 `--recursive` 递归扫描子目录：
+```bash
+python scripts/main.py --dir 字幕文件夹 --recursive
+```
+
+批量模式支持所有单文件参数（如 `--quality high`, `--workers 2`），会统一应用到每个文件。
 
 首次运行会自动在 `global_node_modules/` 中安装 `hyperframes`（约 300MB），之后渲染会复用该依赖。
 
@@ -96,7 +108,7 @@ output/video/<clean_name>/
 
 ```
 ├── scripts/
-│   ├── main.py                ← 命令行主入口
+│   ├── main.py                ← 命令行主入口（支持单文件/批量）
 │   ├── gui.py                 ← 图形界面入口
 │   ├── config.json            ← 默认参数配置
 │   ├── video_renderer.py      ← 核心渲染流程
