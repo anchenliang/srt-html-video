@@ -2,32 +2,42 @@
 main.py — Unified entry point for SRT to video pipeline
 
 Usage:
-    python scripts/main.py path/to/your.srt
+    # 单文件处理
+    python scripts/main.py path/to/your.srt [options]
 
-Features:
-    - Reads config.json for default parameters
-    - Command-line arguments override config values
-    - Splits SRT into parts (configurable lines per part)
-    - Serially processes each part (render to MP4)
-    - Generates a summary.txt with parameters, frame counts, durations, etc.
-    - Concatenates all parts into all.mp4 after successful generation.
-    - Copies all.mp4 to output/video_all/{clean_name}_all.mp4
+    # 批量处理目录
+    python scripts/main.py --dir path/to/srt_folder [--recursive] [options]
+
+Options:
+    --template PATH        HTML template file (overrides config)
+    --title TITLE          Base title for all parts
+    --quality {draft,standard,high}  Render quality
+    --split-parts N        Number of subtitles per part
+    --workers N            Number of parallel render workers
+    --dir DIR              Process all .srt files in directory
+    --recursive            Scan subdirectories recursively (with --dir)
 """
 
-import argparse, os, sys, time, datetime, subprocess, json, shutil
+import argparse
+import os
+import sys
+import time
+import datetime
+import subprocess
+import json
+import shutil
+import glob
 from process_srt import split_srt_file, clean_filename
 from video_renderer import render_srt_to_video
 from concat_videos import concat_project
 
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-SCRIPTS_DIR = os.path.dirname(os.path.abspath(__file__))        # 已有定义，可直接使用
+SCRIPTS_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECTS_DIR = os.path.join(ROOT_DIR, "projects")
 TEMPLATES_DIR = os.path.join(SCRIPTS_DIR, "templates")
 DEFAULT_TEMPLATE = os.path.join(TEMPLATES_DIR, "podcast-enhanced-template.html")
-
-# 配置文件放在 scripts 目录下
-SCRIPTS_DIR = os.path.dirname(os.path.abspath(__file__))
 CONFIG_PATH = os.path.join(SCRIPTS_DIR, "config.json")
+
 
 def load_config():
     """Load configuration from config.json, return dict with defaults."""
@@ -47,6 +57,7 @@ def load_config():
     else:
         print(f"  [INFO] config.json not found. Using default values.")
     return default_config
+
 
 def get_video_info(filepath):
     """尝试使用 ffprobe 获取视频的帧数。如果失败则返回 None。"""
@@ -92,6 +103,7 @@ def get_video_info(filepath):
     except Exception:
         return None
 
+
 def format_time_sec(seconds):
     """将秒数格式化为 mm:ss 或 hh:mm:ss"""
     if seconds < 60:
@@ -106,39 +118,16 @@ def format_time_sec(seconds):
         s = seconds % 60
         return f"{h}h {m}m {s:.1f}s"
 
-def main():
-    config = load_config()
 
-    parser = argparse.ArgumentParser(
-        description="Process an SRT file into multiple HyperFrames videos (one-click)")
-    parser.add_argument("input", help="Path to the .srt file")
-    parser.add_argument("--template", default=config.get("template"),
-                        help="Path to template HTML file (overrides config)")
-    parser.add_argument("--title", help="Base title for all parts")
-    parser.add_argument("--quality", choices=["draft", "standard", "high"],
-                        default=config.get("quality"),
-                        help="Render quality (overrides config)")
-    parser.add_argument("--split-parts", type=int,
-                        default=config.get("split_parts"),
-                        help="Number of subtitles per part (overrides config)")
-    parser.add_argument("--workers", type=int,
-                        default=config.get("workers"),
-                        help="Number of parallel render workers (overrides config)")
-    args = parser.parse_args()
+def process_single_srt(srt_path, args):
+    """
+    处理单个 SRT 文件，生成视频并拼接。
+    返回 (success, all_path, error_message)
+    """
+    if not os.path.isfile(srt_path):
+        return False, None, f"File not found: {srt_path}"
 
-    # 如果配置未提供，使用硬编码默认值（以防万一）
-    if args.split_parts is None:
-        args.split_parts = 30
-    if args.quality is None:
-        args.quality = "standard"
-    if args.workers is None:
-        args.workers = 1
-
-    if not os.path.isfile(args.input):
-        print(f"Error: SRT file not found -> {args.input}", file=sys.stderr)
-        sys.exit(1)
-
-    srt_path = os.path.abspath(args.input)
+    srt_path = os.path.abspath(srt_path)
     base_name = os.path.splitext(os.path.basename(srt_path))[0]
     clean_name = clean_filename(base_name)
     title = args.title or clean_name.replace('_', ' ').title()
@@ -242,7 +231,7 @@ def main():
 
         if not success:
             print(f"\n[FATAL] Aborted at Part {part_num}. Check summary.txt for details.", file=sys.stderr)
-            sys.exit(1)
+            return False, None, f"Part {part_num} rendering failed"
 
     # 全部成功，写入总结尾
     with open(summary_path, 'a', encoding='utf-8') as f:
@@ -262,11 +251,10 @@ def main():
     )
     if success:
         print(f"  All parts concatenated successfully: {all_path}")
-        # 在 summary.txt 中记录拼接信息
         with open(summary_path, 'a', encoding='utf-8') as f:
             f.write(f"\nConcatenated video: {all_path}\n")
 
-        # ===== 新增：复制 all.mp4 到 output/video_all =====
+        # 复制 all.mp4 到 output/video_all
         video_all_dir = os.path.join(ROOT_DIR, "output", "video_all")
         os.makedirs(video_all_dir, exist_ok=True)
         dst_filename = f"{clean_name}_all.mp4"
@@ -278,15 +266,117 @@ def main():
             print(f"  [WARNING] Failed to copy all.mp4: {e}", file=sys.stderr)
     else:
         print("  [WARNING] Concatenation failed, but individual parts are available.", file=sys.stderr)
-    print("=" * 50)
 
-    print("\n" + "=" * 50)
+    print("=" * 50)
     print(f"  All parts processed successfully. Videos saved in: {video_output_root}")
     print(f"  Summary log: {summary_path}")
     if success:
         print(f"  Concatenated video: {all_path}")
         print(f"  Copy saved to: {dst_path}")
     print("=" * 50)
+
+    return success, all_path if success else None, None
+
+
+def collect_srt_files(directory, recursive=False):
+    """收集指定目录下的所有 .srt 文件"""
+    pattern = "**/*.srt" if recursive else "*.srt"
+    search_path = os.path.join(directory, pattern)
+    files = glob.glob(search_path, recursive=recursive)
+    return sorted(set(os.path.abspath(f) for f in files))
+
+
+def main():
+    config = load_config()
+
+    parser = argparse.ArgumentParser(
+        description="Process an SRT file into multiple HyperFrames videos (one-click) or batch process a directory.",
+        epilog="Examples:\n"
+               "  python scripts/main.py video.srt\n"
+               "  python scripts/main.py --dir batchSRC\n"
+               "  python scripts/main.py --dir batchSRC --recursive"
+    )
+    parser.add_argument("input", nargs="?", help="Path to the .srt file (single file mode)")
+    parser.add_argument("--dir", help="Process all .srt files in this directory (batch mode)")
+    parser.add_argument("--recursive", action="store_true", help="Scan subdirectories recursively (with --dir)")
+    parser.add_argument("--template", default=config.get("template"),
+                        help="Path to template HTML file (overrides config)")
+    parser.add_argument("--title", help="Base title for all parts")
+    parser.add_argument("--quality", choices=["draft", "standard", "high"],
+                        default=config.get("quality"),
+                        help="Render quality (overrides config)")
+    parser.add_argument("--split-parts", type=int,
+                        default=config.get("split_parts"),
+                        help="Number of subtitles per part (overrides config)")
+    parser.add_argument("--workers", type=int,
+                        default=config.get("workers"),
+                        help="Number of parallel render workers (overrides config)")
+    args = parser.parse_args()
+
+    # 设置默认值
+    if args.split_parts is None:
+        args.split_parts = 30
+    if args.quality is None:
+        args.quality = "standard"
+    if args.workers is None:
+        args.workers = 1
+    if args.template is None:
+        args.template = DEFAULT_TEMPLATE
+
+    # 决定模式
+    if args.dir:
+        # 批量模式
+        if not os.path.isdir(args.dir):
+            print(f"Error: Directory not found: {args.dir}", file=sys.stderr)
+            sys.exit(1)
+
+        srt_files = collect_srt_files(args.dir, args.recursive)
+        if not srt_files:
+            print(f"No .srt files found in {args.dir}" + (" (recursive)" if args.recursive else ""), file=sys.stderr)
+            sys.exit(1)
+
+        print(f"\n批量处理模式: 共发现 {len(srt_files)} 个 SRT 文件")
+        print(f"参数: split-parts={args.split_parts}, quality={args.quality}, workers={args.workers}")
+        if args.recursive:
+            print("递归扫描子目录")
+        print("=" * 60)
+
+        results = []
+        total = len(srt_files)
+        for idx, srt_path in enumerate(srt_files, 1):
+            print(f"\n>>> [{idx}/{total}] 处理文件: {os.path.basename(srt_path)}")
+            start_time = time.time()
+            success, all_path, error = process_single_srt(srt_path, args)
+            elapsed = time.time() - start_time
+            status = "✅ 成功" if success else "❌ 失败"
+            print(f"{status}  耗时 {elapsed:.1f}s")
+            results.append((srt_path, success, elapsed, all_path, error))
+
+        # 汇总
+        print("\n" + "=" * 60)
+        print("批量处理完成! 汇总:")
+        success_count = sum(1 for _, s, _, _, _ in results if s)
+        fail_count = total - success_count
+        for srt_path, success, elapsed, all_path, error in results:
+            status = "✅" if success else "❌"
+            print(f"  {status} {os.path.basename(srt_path)} - {'成功' if success else f'失败: {error}'} (耗时 {elapsed:.1f}s)")
+        print(f"\n总计: {success_count} 成功, {fail_count} 失败")
+        if fail_count > 0:
+            sys.exit(1)  # 存在失败则返回非0
+
+    else:
+        # 单文件模式
+        if not args.input:
+            parser.error("Please provide an SRT file path or use --dir for batch processing.")
+
+        if not os.path.isfile(args.input):
+            print(f"Error: SRT file not found -> {args.input}", file=sys.stderr)
+            sys.exit(1)
+
+        success, all_path, error = process_single_srt(args.input, args)
+        if not success:
+            sys.exit(1)
+
 
 if __name__ == "__main__":
     main()
